@@ -27,7 +27,7 @@ const auth = async (req, res, next) => {
     });
 
     const user = await User.findByPk(decoded.userId, {
-      attributes: { exclude: ['password', 'jiraApiToken', 'aiToken'] },
+      attributes: { exclude: ['password'] },
     });
 
     if (!user) {
@@ -35,6 +35,16 @@ const auth = async (req, res, next) => {
         error: 'Недействительный токен',
       });
     }
+
+    console.log('🔍 DEBUG: Пользователь загружен в middleware auth:', {
+      userId: user.id,
+      username: user.username,
+      jiraApiToken: user.jiraApiToken
+        ? '***' + user.jiraApiToken.slice(-4)
+        : 'NULL',
+      jiraApiTokenLength: user.jiraApiToken ? user.jiraApiToken.length : 0,
+      hasJiraApiToken: !!user.jiraApiToken,
+    });
 
     req.user = user;
     next();

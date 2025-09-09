@@ -18,6 +18,14 @@ export const hashPassword = (password: string): string => {
 };
 
 /**
+ * Хеширует пароль с существующей солью (для проверки)
+ */
+export const hashPasswordWithSalt = (password: string, salt: string): string => {
+  const hashedPassword = CryptoJS.SHA256(password + salt).toString();
+  return `${hashedPassword}:${salt}`;
+};
+
+/**
  * Проверяет, является ли строка хешированным паролем
  */
 export const isHashedPassword = (password: string): boolean => {

@@ -102,8 +102,21 @@ const User = sequelize.define(
 
         // Шифруем токены при обновлении
         if (user.changed('jiraApiToken') && user.jiraApiToken) {
-          console.log('🔐 Шифрование jiraApiToken при обновлении');
+          console.log('🔐 Шифрование jiraApiToken при обновлении:', {
+            userId: user.id,
+            originalLength: user.jiraApiToken.length,
+            originalValue: user.jiraApiToken
+              ? '***' + user.jiraApiToken.slice(-4)
+              : 'NULL',
+          });
+          const originalToken = user.jiraApiToken;
           user.jiraApiToken = encrypt(user.jiraApiToken);
+          console.log('🔐 Токен зашифрован:', {
+            userId: user.id,
+            originalLength: originalToken.length,
+            encryptedLength: user.jiraApiToken ? user.jiraApiToken.length : 0,
+            encryptedSuccess: !!user.jiraApiToken,
+          });
         }
         if (user.changed('aiToken') && user.aiToken) {
           console.log('🔐 Шифрование aiToken при обновлении');
@@ -122,9 +135,29 @@ const User = sequelize.define(
             }
           });
         } else if (users) {
+          console.log('🔍 DEBUG: Хук afterFind для пользователя:', {
+            userId: users.id,
+            username: users.username,
+            jiraApiTokenBefore: users.jiraApiToken
+              ? '***' + users.jiraApiToken.slice(-4)
+              : 'NULL',
+            jiraApiTokenLengthBefore: users.jiraApiToken
+              ? users.jiraApiToken.length
+              : 0,
+          });
+
           if (users.jiraApiToken) {
             try {
+              const originalToken = users.jiraApiToken;
               users.jiraApiToken = decrypt(users.jiraApiToken);
+              console.log('🔍 DEBUG: Токен расшифрован:', {
+                userId: users.id,
+                originalLength: originalToken.length,
+                decryptedLength: users.jiraApiToken
+                  ? users.jiraApiToken.length
+                  : 0,
+                decryptedSuccess: !!users.jiraApiToken,
+              });
             } catch (error) {
               console.error('Ошибка расшифровки jiraApiToken:', error);
               users.jiraApiToken = null;

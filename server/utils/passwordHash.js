@@ -32,24 +32,21 @@ const verifyClientHashedPassword = async (
       return await bcrypt.compare(clientHashedPassword, storedPassword);
     }
 
-    // Извлекаем хеш и соль из пароля с клиента
-    const { hash: clientHash, salt: clientSalt } =
-      parseHashedPassword(clientHashedPassword);
-
-    // Проверяем, что хеш имеет правильную длину (SHA-256 = 64 символа)
-    if (clientHash.length !== 64) {
-      return false;
-    }
-
-    // Проверяем, что соль имеет правильную длину (SHA-256 = 64 символа)
-    if (clientSalt.length !== 64) {
-      return false;
-    }
-
     // Если пароль в БД начинается с "CLIENT_HASH:", значит это клиентский хеш
     if (storedPassword.startsWith('CLIENT_HASH:')) {
       const storedClientHash = storedPassword.replace('CLIENT_HASH:', '');
-      return storedClientHash === clientHashedPassword;
+
+      // Извлекаем соль из сохраненного хеша
+      const { salt: storedSalt } = parseHashedPassword(storedClientHash);
+
+      // Хешируем введенный пароль с той же солью
+      const CryptoJS = require('crypto-js');
+      const hashedInputPassword = CryptoJS.SHA256(
+        clientHashedPassword + storedSalt
+      ).toString();
+      const newHashedPassword = `${hashedInputPassword}:${storedSalt}`;
+
+      return storedClientHash === newHashedPassword;
     }
 
     // Если это не клиентский хеш, значит пароль не соответствует новой системе

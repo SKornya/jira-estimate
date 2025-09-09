@@ -75,10 +75,16 @@ router.put('/', require('../middleware/auth'), async (req, res) => {
       if (jira.username !== undefined) updateData.jiraUsername = jira.username;
       if (jira.email !== undefined) updateData.jiraEmail = jira.email;
       if (jira.apiToken !== undefined) {
-        // Шифруем токен перед сохранением
-        const { encrypt } = require('../utils/encryption');
-        updateData.jiraApiToken = jira.apiToken ? encrypt(jira.apiToken) : null;
-        console.log('🔐 Шифрование jiraApiToken в маршруте');
+        // Токен будет зашифрован в модели User в хуке beforeUpdate
+        updateData.jiraApiToken = jira.apiToken || null;
+        console.log('📝 Установка jiraApiToken для шифрования в модели:', {
+          userId,
+          apiTokenLength: jira.apiToken ? jira.apiToken.length : 0,
+          apiTokenValue: jira.apiToken
+            ? '***' + jira.apiToken.slice(-4)
+            : 'NULL',
+          willBeNull: !jira.apiToken,
+        });
       }
     }
 
@@ -86,10 +92,9 @@ router.put('/', require('../middleware/auth'), async (req, res) => {
     if (ai) {
       if (ai.host !== undefined) updateData.aiHost = ai.host;
       if (ai.token !== undefined) {
-        // Шифруем токен перед сохранением
-        const { encrypt } = require('../utils/encryption');
-        updateData.aiToken = ai.token ? encrypt(ai.token) : null;
-        console.log('🔐 Шифрование aiToken в маршруте');
+        // Токен будет зашифрован в модели User в хуке beforeUpdate
+        updateData.aiToken = ai.token || null;
+        console.log('📝 Установка aiToken для шифрования в модели');
       }
     }
 
@@ -103,19 +108,45 @@ router.put('/', require('../middleware/auth'), async (req, res) => {
         : undefined,
     });
 
-    // Обновляем пользователя
-    const [updatedRowsCount] = await User.update(updateData, {
-      where: { id: userId },
+    console.log('🔄 Обновление пользователя в базе данных:', {
+      userId,
+      updateDataKeys: Object.keys(updateData),
+      jiraApiTokenInUpdate: 'jiraApiToken' in updateData,
     });
 
-    if (updatedRowsCount === 0) {
+    // Получаем пользователя для обновления (чтобы сработали хуки)
+    const user = await User.findByPk(userId);
+    if (!user) {
       return res.status(404).json({
         error: 'Пользователь не найден',
       });
     }
 
+    // Обновляем поля пользователя
+    Object.assign(user, updateData);
+
+    // Сохраняем пользователя (это вызовет хуки beforeUpdate)
+    await user.save();
+
+    console.log('✅ Обновление завершено:', {
+      userId,
+      success: true,
+    });
+
     // Получаем обновленного пользователя
     const updatedUser = await User.findByPk(userId);
+
+    console.log('📥 Получен обновленный пользователь:', {
+      userId: updatedUser.id,
+      username: updatedUser.username,
+      jiraApiToken: updatedUser.jiraApiToken
+        ? '***' + updatedUser.jiraApiToken.slice(-4)
+        : 'NULL',
+      jiraApiTokenLength: updatedUser.jiraApiToken
+        ? updatedUser.jiraApiToken.length
+        : 0,
+      hasJiraApiToken: !!updatedUser.jiraApiToken,
+    });
 
     res.json({
       message: 'Настройки успешно обновлены',

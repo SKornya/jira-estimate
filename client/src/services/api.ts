@@ -56,12 +56,8 @@ api.interceptors.response.use(
 // API методы для аутентификации
 export const authAPI = {
   login: async (data: LoginFormData): Promise<{ token: string; user: User }> => {
-    // Хешируем пароль перед отправкой
-    const hashedData = {
-      ...data,
-      password: hashPassword(data.password)
-    };
-    const response: AxiosResponse<{ token: string; user: User }> = await api.post('/auth/login', hashedData);
+    // Для логина не хешируем пароль, так как сервер должен проверить его с сохраненной солью
+    const response: AxiosResponse<{ token: string; user: User }> = await api.post('/auth/login', data);
     return response.data;
   },
 

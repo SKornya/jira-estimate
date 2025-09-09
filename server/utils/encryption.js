@@ -57,11 +57,22 @@ function encrypt(text) {
 function decrypt(encryptedText) {
   if (!encryptedText) return null;
 
+  console.log('🔍 DEBUG: Начало расшифровки:', {
+    encryptedText: encryptedText ? '***' + encryptedText.slice(-4) : 'NULL',
+    length: encryptedText ? encryptedText.length : 0,
+    hasColon: encryptedText ? encryptedText.includes(':') : false,
+  });
+
   try {
     // Проверяем формат (старый формат CryptoJS или новый формат)
     if (encryptedText.includes(':')) {
       // Новый формат: IV:authTag:encrypted
       const parts = encryptedText.split(':');
+      console.log('🔍 DEBUG: Новый формат, части:', {
+        partsCount: parts.length,
+        partLengths: parts.map((p) => p.length),
+      });
+
       if (parts.length !== 3) {
         throw new Error('Неверный формат зашифрованных данных');
       }
@@ -70,18 +81,38 @@ function decrypt(encryptedText) {
       const authTag = Buffer.from(parts[1], 'hex');
       const encrypted = parts[2];
 
+      console.log('🔍 DEBUG: Параметры расшифровки:', {
+        ivLength: iv.length,
+        authTagLength: authTag.length,
+        encryptedLength: encrypted.length,
+      });
+
       const decipher = crypto.createDecipher('aes-256-gcm', ENCRYPTION_KEY);
       decipher.setAuthTag(authTag);
 
       let decrypted = decipher.update(encrypted, 'hex', 'utf8');
       decrypted += decipher.final('utf8');
 
+      console.log('🔍 DEBUG: Расшифровка успешна:', {
+        decryptedLength: decrypted.length,
+        decryptedValue: decrypted ? '***' + decrypted.slice(-4) : 'NULL',
+      });
+
       return decrypted;
     } else {
       // Старый формат CryptoJS (для обратной совместимости)
-      const bytes = CryptoJS.AES.decrypt(encryptedText, ENCRYPTION_KEY);
-      const decrypted = bytes.toString(CryptoJS.enc.Utf8);
-      return decrypted;
+      try {
+        const bytes = CryptoJS.AES.decrypt(encryptedText, ENCRYPTION_KEY);
+        const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+        if (!decrypted) {
+          throw new Error('Не удалось расшифровать данные');
+        }
+        return decrypted;
+      } catch (cryptoJSError) {
+        console.error('Ошибка расшифровки CryptoJS:', cryptoJSError);
+        // Если не удалось расшифровать как CryptoJS, возможно это уже расшифрованные данные
+        return encryptedText;
+      }
     }
   } catch (error) {
     console.error('Ошибка расшифровки:', error);
