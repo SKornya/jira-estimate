@@ -2,7 +2,7 @@ import axios, { AxiosResponse } from 'axios';
 import {
   User,
   LoginFormData,
-  RegisterFormData,
+  RegisterRequestData,
   JiraIssueResponse,
   EstimationRequest,
   EstimationResponse,
@@ -10,11 +10,11 @@ import {
   EstimationHistoryResponse,
   EstimationStats,
   TaskStats,
-  ApiResponse,
   AppSettings,
   SettingsUpdateRequest,
   SettingsUpdateResponse
 } from '../types';
+import { hashPassword } from '../utils/passwordHash';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 
@@ -56,12 +56,22 @@ api.interceptors.response.use(
 // API методы для аутентификации
 export const authAPI = {
   login: async (data: LoginFormData): Promise<{ token: string; user: User }> => {
-    const response: AxiosResponse<{ token: string; user: User }> = await api.post('/auth/login', data);
+    // Хешируем пароль перед отправкой
+    const hashedData = {
+      ...data,
+      password: hashPassword(data.password)
+    };
+    const response: AxiosResponse<{ token: string; user: User }> = await api.post('/auth/login', hashedData);
     return response.data;
   },
 
-  register: async (data: RegisterFormData): Promise<{ token: string; user: User }> => {
-    const response: AxiosResponse<{ token: string; user: User }> = await api.post('/auth/register', data);
+  register: async (data: RegisterRequestData): Promise<{ token: string; user: User }> => {
+    // Хешируем пароль перед отправкой
+    const hashedData = {
+      ...data,
+      password: hashPassword(data.password)
+    };
+    const response: AxiosResponse<{ token: string; user: User }> = await api.post('/auth/register', hashedData);
     return response.data;
   },
 

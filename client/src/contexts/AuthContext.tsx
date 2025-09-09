@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { User, AuthState, LoginFormData, RegisterFormData } from '../types';
+import { User, AuthState, LoginFormData, RegisterFormData, RegisterRequestData } from '../types';
 import { authAPI } from '../services/api';
 
 interface AuthContextType extends AuthState {
@@ -123,7 +123,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const register = async (data: RegisterFormData) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
-      const response = await authAPI.register(data);
+      
+      // Убираем confirmPassword перед отправкой на сервер
+      const { confirmPassword, ...registrationData } = data;
+      const response = await authAPI.register(registrationData);
       
       console.log('Registration successful:', response);
       

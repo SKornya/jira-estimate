@@ -1,11 +1,30 @@
 const CryptoJS = require('crypto-js');
+const crypto = require('crypto');
 
 // Получаем ключ шифрования из переменных окружения
-const ENCRYPTION_KEY =
-  process.env.ENCRYPTION_KEY || 'default-encryption-key-change-in-production';
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+
+// Проверяем наличие ключа шифрования
+if (!ENCRYPTION_KEY) {
+  console.error(
+    '❌ КРИТИЧЕСКАЯ ОШИБКА: ENCRYPTION_KEY не установлен в переменных окружения!'
+  );
+  console.error(
+    'Установите сильный ключ шифрования в переменной окружения ENCRYPTION_KEY'
+  );
+  process.exit(1);
+}
+
+// Проверяем длину ключа
+if (ENCRYPTION_KEY.length < 32) {
+  console.error(
+    '❌ КРИТИЧЕСКАЯ ОШИБКА: ENCRYPTION_KEY должен содержать минимум 32 символа!'
+  );
+  process.exit(1);
+}
 
 /**
- * Шифрует строку
+ * Шифрует строку с использованием AES-256-GCM
  * @param {string} text - Текст для шифрования
  * @returns {string} - Зашифрованная строка
  */
@@ -13,8 +32,17 @@ function encrypt(text) {
   if (!text) return null;
 
   try {
-    const encrypted = CryptoJS.AES.encrypt(text, ENCRYPTION_KEY).toString();
-    return encrypted;
+    // Генерируем случайный IV для каждого шифрования
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipher('aes-256-gcm', ENCRYPTION_KEY);
+
+    let encrypted = cipher.update(text, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+
+    const authTag = cipher.getAuthTag();
+
+    // Возвращаем IV + authTag + encrypted data
+    return iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
   } catch (error) {
     console.error('Ошибка шифрования:', error);
     return null;
@@ -30,9 +58,31 @@ function decrypt(encryptedText) {
   if (!encryptedText) return null;
 
   try {
-    const bytes = CryptoJS.AES.decrypt(encryptedText, ENCRYPTION_KEY);
-    const decrypted = bytes.toString(CryptoJS.enc.Utf8);
-    return decrypted;
+    // Проверяем формат (старый формат CryptoJS или новый формат)
+    if (encryptedText.includes(':')) {
+      // Новый формат: IV:authTag:encrypted
+      const parts = encryptedText.split(':');
+      if (parts.length !== 3) {
+        throw new Error('Неверный формат зашифрованных данных');
+      }
+
+      const iv = Buffer.from(parts[0], 'hex');
+      const authTag = Buffer.from(parts[1], 'hex');
+      const encrypted = parts[2];
+
+      const decipher = crypto.createDecipher('aes-256-gcm', ENCRYPTION_KEY);
+      decipher.setAuthTag(authTag);
+
+      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+
+      return decrypted;
+    } else {
+      // Старый формат CryptoJS (для обратной совместимости)
+      const bytes = CryptoJS.AES.decrypt(encryptedText, ENCRYPTION_KEY);
+      const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+      return decrypted;
+    }
   } catch (error) {
     console.error('Ошибка расшифровки:', error);
     return null;

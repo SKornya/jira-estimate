@@ -123,6 +123,12 @@ export interface RegisterFormData {
   confirmPassword: string;
 }
 
+export interface RegisterRequestData {
+  username: string;
+  email: string;
+  password: string;
+}
+
 export interface JiraIssueResponse {
   mainIssue: Task;
   subtasks: Task[];

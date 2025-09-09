@@ -1,20 +1,39 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const JiraService = require('../services/jiraService');
 const router = express.Router();
 
-// Регистрация
-router.post('/register', async (req, res) => {
-  try {
-    const { username, email, password } = req.body;
+// Валидация для регистрации
+const registerValidation = [
+  body('username')
+    .isLength({ min: 3, max: 50 })
+    .withMessage('Имя пользователя должно содержать от 3 до 50 символов')
+    .matches(/^[a-zA-Z0-9_-]+$/)
+    .withMessage(
+      'Имя пользователя может содержать только буквы, цифры, дефисы и подчеркивания'
+    ),
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Введите корректный email адрес'),
+  body('password').notEmpty().withMessage('Пароль обязателен'),
+];
 
-    // Проверка обязательных полей
-    if (!username || !email || !password) {
+// Регистрация
+router.post('/register', registerValidation, async (req, res) => {
+  try {
+    // Проверка результатов валидации
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
       return res.status(400).json({
-        error: 'Имя пользователя, email и пароль обязательны для заполнения',
+        error: 'Ошибка валидации',
+        details: errors.array(),
       });
     }
+
+    const { username, email, password } = req.body;
 
     // Получение данных Jira из переменных окружения или использование значений по умолчанию
     const jiraUsername = process.env.JIRA_USERNAME || 'demo-user';
@@ -75,9 +94,21 @@ router.post('/register', async (req, res) => {
       jiraApiToken,
     });
 
+    // Проверяем наличие JWT секрета
+    if (!process.env.JWT_SECRET) {
+      console.error(
+        '❌ КРИТИЧЕСКАЯ ОШИБКА: JWT_SECRET не установлен в переменных окружения!'
+      );
+      return res.status(500).json({
+        error: 'Ошибка конфигурации сервера',
+      });
+    }
+
     // Генерация JWT токена
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
-      expiresIn: '7d',
+      expiresIn: '24h', // Уменьшаем время жизни токена
+      issuer: 'jira-estimate-app',
+      audience: 'jira-estimate-users',
     });
 
     res.status(201).json({
@@ -98,16 +129,28 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Вход
-router.post('/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
+// Валидация для входа
+const loginValidation = [
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Введите корректный email адрес'),
+  body('password').notEmpty().withMessage('Пароль обязателен'),
+];
 
-    if (!email || !password) {
+// Вход
+router.post('/login', loginValidation, async (req, res) => {
+  try {
+    // Проверка результатов валидации
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
       return res.status(400).json({
-        error: 'Email и пароль обязательны',
+        error: 'Ошибка валидации',
+        details: errors.array(),
       });
     }
+
+    const { email, password } = req.body;
 
     // Поиск пользователя
     const user = await User.findOne({ where: { email } });
@@ -128,9 +171,21 @@ router.post('/login', async (req, res) => {
     // Обновление времени последнего входа
     await user.update({ lastLogin: new Date() });
 
+    // Проверяем наличие JWT секрета
+    if (!process.env.JWT_SECRET) {
+      console.error(
+        '❌ КРИТИЧЕСКАЯ ОШИБКА: JWT_SECRET не установлен в переменных окружения!'
+      );
+      return res.status(500).json({
+        error: 'Ошибка конфигурации сервера',
+      });
+    }
+
     // Генерация JWT токена
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
-      expiresIn: '7d',
+      expiresIn: '24h', // Уменьшаем время жизни токена
+      issuer: 'jira-estimate-app',
+      audience: 'jira-estimate-users',
     });
 
     res.json({

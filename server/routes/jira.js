@@ -1,19 +1,37 @@
 const express = require('express');
+const { body, validationResult } = require('express-validator');
 const JiraService = require('../services/jiraService');
 const Task = require('../models/Task');
 const auth = require('../middleware/auth');
 const router = express.Router();
 
-// Получение информации о задаче по ссылке
-router.post('/fetch-issue', auth, async (req, res) => {
-  try {
-    const { issueUrl } = req.body;
+// Валидация URL задачи
+const issueUrlValidation = [
+  body('issueUrl')
+    .isURL({ protocols: ['http', 'https'] })
+    .withMessage('URL задачи должен быть валидным HTTP/HTTPS URL')
+    .custom((value) => {
+      // Проверяем, что URL содержит atlassian.net или jira
+      if (!value.includes('atlassian.net') && !value.includes('jira')) {
+        throw new Error('URL должен быть ссылкой на Jira');
+      }
+      return true;
+    }),
+];
 
-    if (!issueUrl) {
+// Получение информации о задаче по ссылке
+router.post('/fetch-issue', auth, issueUrlValidation, async (req, res) => {
+  try {
+    // Проверка результатов валидации
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
       return res.status(400).json({
-        error: 'URL задачи обязателен',
+        error: 'Ошибка валидации',
+        details: errors.array(),
       });
     }
+
+    const { issueUrl } = req.body;
 
     // Проверка наличия учетных данных Jira
     if (
