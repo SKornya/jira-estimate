@@ -3,11 +3,12 @@ const axios = require('axios');
 class AIService {
   constructor(
     apiKey = process.env.AI_API_KEY,
-    model = process.env.AI_MODEL || 'gpt-3.5-turbo'
+    model = process.env.AI_MODEL || 'gpt-3.5-turbo',
+    host = process.env.AI_HOST || 'https://api.openai.com/v1'
   ) {
     this.apiKey = apiKey;
     this.model = model;
-    this.baseUrl = process.env.AI_HOST || 'https://api.openai.com/v1';
+    this.baseUrl = host;
 
     console.log('🤖 Создание AIService:', {
       model: this.model,

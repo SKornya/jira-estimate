@@ -119,6 +119,11 @@ const Task = sequelize.define(
       type: DataTypes.JSON,
       allowNull: true,
     },
+    // Время создания AI оценки
+    aiEstimateCreatedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
     // Метаданные
     labels: {
       type: DataTypes.JSON,
@@ -161,9 +166,6 @@ const Task = sequelize.define(
       },
       {
         fields: ['created'],
-      },
-      {
-        fields: ['ai_estimate_created_at'],
       },
     ],
   }

@@ -70,6 +70,7 @@ create_docker_env() {
     # Генерация случайных паролей
     POSTGRES_PASSWORD=$(openssl rand -base64 32 2>/dev/null || echo "postgres_password_$(date +%s)")
     JWT_SECRET=$(openssl rand -base64 64 2>/dev/null || echo "jwt_secret_$(date +%s)")
+    ENCRYPTION_KEY=$(openssl rand -base64 64 2>/dev/null || echo "encryption_key_$(date +%s)")
     
     # Создание файла .env
     cat > .env << EOF
@@ -88,14 +89,9 @@ FRONTEND_URL=http://localhost:3000
 # JWT Configuration
 JWT_SECRET=$JWT_SECRET
 JWT_EXPIRES_IN=24h
+ENCRYPTION_KEY=$ENCRYPTION_KEY
 
-# Jira Configuration (заполните после развертывания)
-JIRA_BASE_URL=
-JIRA_USERNAME=
-JIRA_API_TOKEN=
-
-# AI Service Configuration (заполните после развертывания)
-OPENAI_API_KEY=
+# Настройки Jira и AI теперь настраиваются пользователями через интерфейс
 
 # Frontend Configuration
 FRONTEND_PORT=3000

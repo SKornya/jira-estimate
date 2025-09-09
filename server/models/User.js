@@ -47,9 +47,12 @@ const User = sequelize.define(
     },
     jiraUsername: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       validate: {
-        notEmpty: true,
+        notEmpty: {
+          msg: 'Jira username не может быть пустым',
+          args: true,
+        },
       },
     },
     jiraBaseUrl: {

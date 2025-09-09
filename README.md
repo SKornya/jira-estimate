@@ -59,36 +59,27 @@ cp env.example .env
 Заполните переменные в `.env`:
 
 ```env
-# Jira Configuration
-JIRA_BASE_URL=https://your-domain.atlassian.net
-JIRA_EMAIL=your-email@example.com
-JIRA_API_TOKEN=your-jira-api-token
-
-# AI Service Configuration
-OPENAI_API_KEY=your-openai-api-key
-AI_MODEL=gpt-3.5-turbo
-
 # Database Configuration
-MONGODB_URI=mongodb://localhost:27017/jira-estimate
+DATABASE_URL=postgresql://postgres:password@localhost:5432/jira_estimate
 
 # JWT Configuration
 JWT_SECRET=your-super-secret-jwt-key
 
 # Server Configuration
-PORT=5000
+PORT=3001
 NODE_ENV=development
+FRONTEND_URL=http://localhost:3000
+
+# Encryption Configuration
+ENCRYPTION_KEY=your-very-secure-encryption-key
 ```
+
+**Важно:** Настройки Jira и AI сервисов теперь настраиваются через интерфейс приложения в разделе "Настройки" после регистрации.
 
 Создайте файл `.env` в папке `client` на основе `client/env.example`:
 
 ```bash
 cp client/env.example client/.env
-```
-
-Заполните переменные в `client/.env`:
-
-```env
-REACT_APP_API_URL=http://localhost:5000/api
 ```
 
 ### 4. Запуск приложения
@@ -123,13 +114,22 @@ npm run server
 ### 1. Регистрация
 - Откройте приложение в браузере
 - Нажмите "Зарегистрироваться"
-- Заполните форму с данными Jira:
-  - Имя пользователя и email
-  - URL вашего Jira (например: https://your-domain.atlassian.net)
-  - Email для Jira
-  - API токен Jira (создайте в настройках Jira)
+- Заполните форму регистрации с основными данными
 
-### 2. Получение оценки
+### 2. Настройка сервисов
+После регистрации перейдите в раздел "Настройки" и настройте:
+
+**Jira:**
+- URL вашего Jira (например: https://your-domain.atlassian.net)
+- Имя пользователя Jira
+- Email для Jira
+- API токен Jira (создайте в настройках профиля Jira)
+
+**AI сервис:**
+- Хост AI сервиса (например: https://api.openai.com)
+- API токен AI сервиса
+
+### 3. Получение оценки
 - Войдите в систему
 - Вставьте ссылку на задачу Jira в форму
 - Нажмите "Загрузить задачу"

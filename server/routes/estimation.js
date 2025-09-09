@@ -1,6 +1,7 @@
 const express = require('express');
 const AIService = require('../services/aiService');
 const Task = require('../models/Task');
+const User = require('../models/User');
 const { sequelize } = require('../config/database');
 const auth = require('../middleware/auth');
 const router = express.Router();
@@ -62,19 +63,34 @@ router.post('/estimate', auth, async (req, res) => {
       })),
     });
 
-    // Проверка доступности AI сервиса
-    const aiService = new AIService(
-      process.env.OPENAI_API_KEY,
-      process.env.AI_MODEL
-    );
+    // Получаем настройки пользователя для AI сервиса
+    const user = await User.findByPk(req.user.id);
+    if (!user) {
+      return res.status(404).json({
+        error: 'Пользователь не найден',
+      });
+    }
 
-    console.log('🤖 Проверка доступности AI сервиса...');
+    if (!user.aiHost || !user.aiToken) {
+      console.log('❌ AI настройки не настроены у пользователя');
+      return res.status(400).json({
+        error:
+          'AI сервис не настроен. Пожалуйста, настройте AI сервис в настройках профиля.',
+      });
+    }
+
+    // Проверка доступности AI сервиса с пользовательскими настройками
+    const aiService = new AIService(user.aiToken, 'gpt-3.5-turbo', user.aiHost);
+
+    console.log(
+      '🤖 Проверка доступности AI сервиса с пользовательскими настройками...'
+    );
     const aiAvailable = await aiService.testConnection();
 
     if (!aiAvailable) {
-      console.log('❌ AI сервис недоступен');
+      console.log('❌ AI сервис недоступен с пользовательскими настройками');
       return res.status(503).json({
-        error: 'AI сервис недоступен',
+        error: 'AI сервис недоступен. Проверьте настройки AI сервиса.',
       });
     }
 

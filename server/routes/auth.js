@@ -35,18 +35,13 @@ router.post('/register', registerValidation, async (req, res) => {
 
     const { username, email, password } = req.body;
 
-    // Получение данных Jira из переменных окружения или использование значений по умолчанию
-    const jiraUsername = process.env.JIRA_USERNAME || 'demo-user';
-    const jiraBaseUrl =
-      process.env.JIRA_BASE_URL || 'https://demo.atlassian.net';
-    const jiraEmail = process.env.JIRA_EMAIL || 'demo@example.com';
-    const jiraApiToken = process.env.JIRA_API_TOKEN || 'demo-token';
+    // Данные Jira будут настроены пользователем позже в настройках профиля
+    const jiraUsername = null;
+    const jiraBaseUrl = null;
+    const jiraEmail = null;
+    const jiraApiToken = null;
 
-    console.log('Using Jira credentials:', {
-      jiraUsername,
-      jiraBaseUrl,
-      jiraEmail,
-    });
+    console.log('Регистрация пользователя без предустановленных данных Jira');
 
     // Проверка существования пользователя
     const { Op } = require('sequelize');
@@ -62,26 +57,9 @@ router.post('/register', registerValidation, async (req, res) => {
       });
     }
 
-    // Проверка подключения к Jira (пропускаем в демо-режиме)
-    if (jiraApiToken !== 'demo-token') {
-      try {
-        const jiraService = new JiraService(
-          jiraBaseUrl,
-          jiraEmail,
-          jiraApiToken
-        );
-        const jiraConnection = await jiraService.testConnection();
-
-        if (!jiraConnection) {
-          return res.status(400).json({
-            error:
-              'Не удалось подключиться к Jira. Проверьте данные подключения.',
-          });
-        }
-      } catch (error) {
-        console.log('Jira connection test failed, but continuing in demo mode');
-      }
-    }
+    // Подключение к Jira не проверяется при регистрации
+    // Пользователь может настроить Jira позже в настройках профиля
+    console.log('Регистрация пользователя без проверки Jira подключения');
 
     // Создание пользователя
     const user = await User.create({

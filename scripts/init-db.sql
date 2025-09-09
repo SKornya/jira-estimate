@@ -37,28 +37,47 @@ CREATE TABLE IF NOT EXISTS settings (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Создание enum для статуса синхронизации
+CREATE TYPE enum_tasks_sync_status AS ENUM ('synced', 'pending', 'error');
+
 -- Создание таблицы задач
 CREATE TABLE IF NOT EXISTS tasks (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    jira_key VARCHAR(50) NOT NULL,
-    jira_url TEXT NOT NULL,
+    id SERIAL PRIMARY KEY,
+    jira_key VARCHAR(255) NOT NULL UNIQUE,
+    jira_id VARCHAR(255) NOT NULL,
     title TEXT NOT NULL,
-    description TEXT,
-    issue_type VARCHAR(50),
-    priority VARCHAR(20),
-    status VARCHAR(50),
-    assignee VARCHAR(100),
-    reporter VARCHAR(100),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, jira_key)
+    description TEXT DEFAULT '',
+    issue_type VARCHAR(255) NOT NULL,
+    status VARCHAR(255) NOT NULL,
+    priority VARCHAR(255) DEFAULT 'Medium',
+    assignee VARCHAR(255) NOT NULL,
+    reporter VARCHAR(255) NOT NULL,
+    project_key VARCHAR(255),
+    project_name VARCHAR(255),
+    repository VARCHAR(255) DEFAULT '',
+    created TIMESTAMP WITH TIME ZONE NOT NULL,
+    started TIMESTAMP WITH TIME ZONE,
+    completed TIMESTAMP WITH TIME ZONE,
+    parent_key VARCHAR(255),
+    subtasks JSON DEFAULT '[]',
+    original_estimate INTEGER,
+    time_spent INTEGER,
+    ai_estimate JSON,
+    ai_estimate_created_at TIMESTAMP WITH TIME ZONE,
+    labels JSON DEFAULT '[]',
+    components JSON DEFAULT '[]',
+    fix_versions JSON DEFAULT '[]',
+    last_synced TIMESTAMP WITH TIME ZONE,
+    sync_status enum_tasks_sync_status DEFAULT 'synced',
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    user_id INTEGER REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL
 );
 
 -- Создание таблицы оценок
 CREATE TABLE IF NOT EXISTS estimations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     estimated_hours DECIMAL(5,2),
     confidence_level INTEGER CHECK (confidence_level >= 1 AND confidence_level <= 5),
@@ -71,7 +90,7 @@ CREATE TABLE IF NOT EXISTS estimations (
 -- Создание таблицы истории оценок
 CREATE TABLE IF NOT EXISTS estimation_history (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     previous_estimation DECIMAL(5,2),
     new_estimation DECIMAL(5,2),
@@ -85,6 +104,9 @@ CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_settings_user_id ON settings(user_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_user_id ON tasks(user_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_jira_key ON tasks(jira_key);
+CREATE INDEX IF NOT EXISTS idx_tasks_assignee ON tasks(assignee);
+CREATE INDEX IF NOT EXISTS idx_tasks_issue_type ON tasks(issue_type);
+CREATE INDEX IF NOT EXISTS idx_tasks_created ON tasks(created);
 CREATE INDEX IF NOT EXISTS idx_estimations_task_id ON estimations(task_id);
 CREATE INDEX IF NOT EXISTS idx_estimations_user_id ON estimations(user_id);
 CREATE INDEX IF NOT EXISTS idx_estimation_history_task_id ON estimation_history(task_id);
@@ -194,25 +216,25 @@ INSERT INTO settings (user_id, jira_base_url, jira_username) VALUES
 ((SELECT id FROM users WHERE username = 'developer'), 'https://company.atlassian.net', 'dev@company.com');
 */
 
--- Создание пользователя для приложения (если не существует)
+-- Создание пользователя postgres (если не существует)
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'jira_app_user') THEN
-        CREATE ROLE jira_app_user WITH LOGIN PASSWORD 'jira_app_password';
+    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'postgres') THEN
+        CREATE ROLE postgres WITH LOGIN SUPERUSER CREATEDB CREATEROLE PASSWORD 'password';
     END IF;
 END
 $$;
 
--- Предоставление прав пользователю приложения
-GRANT USAGE ON SCHEMA jira_estimate TO jira_app_user;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA jira_estimate TO jira_app_user;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA jira_estimate TO jira_app_user;
-GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA jira_estimate TO jira_app_user;
+-- Предоставление прав пользователю postgres
+GRANT USAGE ON SCHEMA jira_estimate TO postgres;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA jira_estimate TO postgres;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA jira_estimate TO postgres;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA jira_estimate TO postgres;
 
 -- Установка прав по умолчанию для новых объектов
-ALTER DEFAULT PRIVILEGES IN SCHEMA jira_estimate GRANT ALL ON TABLES TO jira_app_user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA jira_estimate GRANT ALL ON SEQUENCES TO jira_app_user;
-ALTER DEFAULT PRIVILEGES IN SCHEMA jira_estimate GRANT EXECUTE ON FUNCTIONS TO jira_app_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA jira_estimate GRANT ALL ON TABLES TO postgres;
+ALTER DEFAULT PRIVILEGES IN SCHEMA jira_estimate GRANT ALL ON SEQUENCES TO postgres;
+ALTER DEFAULT PRIVILEGES IN SCHEMA jira_estimate GRANT EXECUTE ON FUNCTIONS TO postgres;
 
 -- Комментарии к таблицам
 COMMENT ON TABLE users IS 'Пользователи системы';

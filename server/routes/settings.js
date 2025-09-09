@@ -215,20 +215,11 @@ router.post('/test-ai', require('../middleware/auth'), async (req, res) => {
     const axios = require('axios');
 
     try {
-      // Тестируем подключение к OpenAI API (пример)
-      const response = await axios.get(`${host}/chat/completions`, {
+      // Тестируем подключение к AI API
+      const response = await axios.get(`${host}/models`, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
-        },
-        body: {
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'user',
-              content: 'Hello, how are you?',
-            },
-          ],
         },
         timeout: 10000,
       });

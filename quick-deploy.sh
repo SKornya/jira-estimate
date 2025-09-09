@@ -63,13 +63,7 @@ FRONTEND_URL=http://localhost:3000
 JWT_SECRET=$(openssl rand -base64 32 2>/dev/null || echo "jwt-secret-$(date +%s)")
 JWT_EXPIRES_IN=24h
 
-# Jira Configuration (заполните после развертывания)
-JIRA_BASE_URL=
-JIRA_USERNAME=
-JIRA_API_TOKEN=
-
-# AI Service Configuration (заполните после развертывания)
-OPENAI_API_KEY=
+# Настройки Jira и AI теперь настраиваются пользователями через интерфейс
 
 # Frontend Configuration
 FRONTEND_PORT=3000
@@ -156,13 +150,7 @@ FRONTEND_URL=http://localhost:3000
 JWT_SECRET=$(openssl rand -base64 32 2>/dev/null || echo "jwt-secret-$(date +%s)")
 JWT_EXPIRES_IN=24h
 
-# Jira Configuration (заполните после развертывания)
-JIRA_BASE_URL=
-JIRA_USERNAME=
-JIRA_API_TOKEN=
-
-# AI Service Configuration (заполните после развертывания)
-OPENAI_API_KEY=
+# Настройки Jira и AI теперь настраиваются пользователями через интерфейс
 EOF
         log_success "Файл .env создан"
     fi

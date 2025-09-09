@@ -33,17 +33,6 @@ POSTGRES_PORT=5432
 
 ### 4. Другие настройки
 ```bash
-# JIRA (для демо-режима)
-JIRA_USERNAME=demo-user
-JIRA_BASE_URL=https://demo.atlassian.net
-JIRA_EMAIL=demo@example.com
-JIRA_API_TOKEN=demo-token
-
-# AI
-AI_API_KEY=your_openai_api_key_here
-AI_MODEL=gpt-3.5-turbo
-AI_HOST=https://api.openai.com/v1
-
 # Сервер
 PORT=3001
 NODE_ENV=production
@@ -51,6 +40,8 @@ NODE_ENV=production
 # Frontend (для production)
 FRONTEND_URL=https://yourdomain.com
 ```
+
+**Важно:** Настройки Jira и AI сервисов теперь настраиваются пользователями через интерфейс приложения в разделе "Настройки". Это обеспечивает лучшую безопасность, так как каждый пользователь использует свои собственные учетные данные.
 
 ## Генерация безопасных ключей
 
