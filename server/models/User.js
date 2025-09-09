@@ -1,0 +1,150 @@
+const { DataTypes } = require('sequelize');
+const bcrypt = require('bcryptjs');
+const { sequelize } = require('../config/database');
+const {
+  encrypt,
+  decrypt,
+  encryptUserTokens,
+  decryptUserTokens,
+} = require('../utils/encryption');
+
+const User = sequelize.define(
+  'User',
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    username: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+      validate: {
+        notEmpty: true,
+        len: [3, 50],
+      },
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+      validate: {
+        isEmail: true,
+        notEmpty: true,
+      },
+    },
+    password: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        len: [6, 255],
+      },
+    },
+    jiraUsername: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        notEmpty: true,
+      },
+    },
+    jiraBaseUrl: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    jiraEmail: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    jiraApiToken: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    aiHost: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    aiToken: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    lastLogin: {
+      type: DataTypes.DATE,
+      defaultValue: DataTypes.NOW,
+    },
+  },
+  {
+    tableName: 'users',
+    hooks: {
+      beforeCreate: async (user) => {
+        if (user.password) {
+          const salt = await bcrypt.genSalt(10);
+          user.password = await bcrypt.hash(user.password, salt);
+        }
+
+        // Шифруем токены при создании
+        if (user.jiraApiToken) {
+          console.log('🔐 Шифрование jiraApiToken при создании');
+          user.jiraApiToken = encrypt(user.jiraApiToken);
+        }
+        if (user.aiToken) {
+          console.log('🔐 Шифрование aiToken при создании');
+          user.aiToken = encrypt(user.aiToken);
+        }
+      },
+      beforeUpdate: async (user) => {
+        if (user.changed('password')) {
+          const salt = await bcrypt.genSalt(10);
+          user.password = await bcrypt.hash(user.password, salt);
+        }
+
+        // Шифруем токены при обновлении
+        if (user.changed('jiraApiToken') && user.jiraApiToken) {
+          console.log('🔐 Шифрование jiraApiToken при обновлении');
+          user.jiraApiToken = encrypt(user.jiraApiToken);
+        }
+        if (user.changed('aiToken') && user.aiToken) {
+          console.log('🔐 Шифрование aiToken при обновлении');
+          user.aiToken = encrypt(user.aiToken);
+        }
+      },
+      afterFind: async (users) => {
+        // Расшифровываем токены после получения из БД
+        if (Array.isArray(users)) {
+          users.forEach((user) => {
+            if (user.jiraApiToken) {
+              user.jiraApiToken = decrypt(user.jiraApiToken);
+            }
+            if (user.aiToken) {
+              user.aiToken = decrypt(user.aiToken);
+            }
+          });
+        } else if (users) {
+          if (users.jiraApiToken) {
+            try {
+              users.jiraApiToken = decrypt(users.jiraApiToken);
+            } catch (error) {
+              console.error('Ошибка расшифровки jiraApiToken:', error);
+              users.jiraApiToken = null;
+            }
+          }
+          if (users.aiToken) {
+            try {
+              users.aiToken = decrypt(users.aiToken);
+            } catch (error) {
+              console.error('Ошибка расшифровки aiToken:', error);
+              users.aiToken = null;
+            }
+          }
+        }
+      },
+    },
+  }
+);
+
+// Метод для проверки пароля
+User.prototype.comparePassword = async function (candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
+};
+
+module.exports = User;
